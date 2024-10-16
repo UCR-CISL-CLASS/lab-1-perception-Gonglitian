@@ -10,6 +10,7 @@ import numpy as np
 import torch
 from shapely.geometry import Polygon
 
+
 def voc_ap(rec, prec):
     """
     VOC 2010 Average Precision.
@@ -35,6 +36,7 @@ def voc_ap(rec, prec):
         ap += ((mrec[i] - mrec[i - 1]) * mpre[i])
     return ap, mrec, mpre
 
+
 def convert_format(boxes_array):
     """
     Convert boxes array to shapely.geometry.Polygon format.
@@ -52,8 +54,10 @@ def convert_format(boxes_array):
                 boxes_array]
     return np.array(polygons)
 
+
 def box_2_polygon(box_array):
     return Polygon([(box_array[i, 0], box_array[i, 1]) for i in range(4)])
+
 
 def compute_iou(box, boxes):
     """
@@ -78,6 +82,7 @@ def compute_iou(box, boxes):
     iou = [box.intersection(b).area / box.union(b).area for b in boxes]
 
     return np.array(iou, dtype=np.float32)
+
 
 def caluclate_tp_fp(det_boxes, det_score, gt_boxes, result_stat, iou_thresh):
     """
@@ -104,7 +109,7 @@ def caluclate_tp_fp(det_boxes, det_score, gt_boxes, result_stat, iou_thresh):
     if det_boxes is not None:
         # sort the prediction bounding box by score
         score_order_descend = np.argsort(-det_score)
-        det_score = det_score[score_order_descend] # from high to low
+        det_score = det_score[score_order_descend]  # from high to low
         det_polygon_list = list(convert_format(det_boxes))
         gt_polygon_list = list(convert_format(gt_boxes))
 
@@ -121,6 +126,7 @@ def caluclate_tp_fp(det_boxes, det_score, gt_boxes, result_stat, iou_thresh):
             fp.append(0)
             tp.append(1)
 
+            # note: delete sorted gt box in order to avoid repeat matching/calculating
             gt_index = np.argmax(ious)
             gt_polygon_list.pop(gt_index)
 
@@ -139,7 +145,7 @@ def calculate_ap(result_stat, iou, global_sort_detections):
     ----------
     result_stat : dict
         A dictionary contains fp, tp and gt number.
-        
+
     iou : float
         The threshold of iou.
 
@@ -157,7 +163,7 @@ def calculate_ap(result_stat, iou, global_sort_detections):
         sorted_index = np.argsort(-score)
         fp = fp[sorted_index].tolist()
         tp = tp[sorted_index].tolist()
-        
+
     else:
         fp = iou_5['fp']
         tp = iou_5['tp']
@@ -198,9 +204,12 @@ def calculate_ap(result_stat, iou, global_sort_detections):
 def eval_final_results(result_stat, global_sort_detections):
     dump_dict = {}
 
-    ap_30, mrec_30, mpre_30 = calculate_ap(result_stat, 0.30, global_sort_detections)
-    ap_50, mrec_50, mpre_50 = calculate_ap(result_stat, 0.50, global_sort_detections)
-    ap_70, mrec_70, mpre_70 = calculate_ap(result_stat, 0.70, global_sort_detections)
+    ap_30, mrec_30, mpre_30 = calculate_ap(
+        result_stat, 0.30, global_sort_detections)
+    ap_50, mrec_50, mpre_50 = calculate_ap(
+        result_stat, 0.50, global_sort_detections)
+    ap_70, mrec_70, mpre_70 = calculate_ap(
+        result_stat, 0.70, global_sort_detections)
 
     dump_dict.update({'ap_30': ap_30,
                       'ap_50': ap_50,
