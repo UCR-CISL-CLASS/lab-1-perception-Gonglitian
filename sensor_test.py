@@ -5,6 +5,18 @@ from detector import Detector
 # 初始化Pygame
 pygame.init()
 
+
+def get_vehicle_by_id(world, vehicle_id):
+    # 获取世界中的所有actor
+    actors = world.get_actors()
+
+    # 遍历所有actor，找到指定ID的车辆
+    for actor in actors:
+        if actor.id == vehicle_id and 'vehicle' in actor.type_id:
+            return actor
+    return None
+
+
 # 设置窗口大小
 display_width = 800
 display_height = 600
@@ -21,11 +33,14 @@ blueprint_library = world.get_blueprint_library()
 
 # 生成车辆
 vehicle_bp = blueprint_library.filter('vehicle.*')[0]
-spawn_point = world.get_map().get_spawn_points()[0]
-vehicle = world.spawn_actor(vehicle_bp, spawn_point)
-#设置车辆ID
-vehicle.set_attribute('role_name', 'hero')
+spawn_points = world.get_map().get_spawn_points()
+# 尝试生成，如果失败则更换生成位置
+for p in spawn_points:
+    vehicle = world.try_spawn_actor(vehicle_bp, p)
+    if vehicle is not None:
+        break
 
+print(f"Vehicle ID {vehicle.id}")
 
 # 设置车辆为自动驾驶
 vehicle.set_autopilot(True)
@@ -47,10 +62,9 @@ for sensor in sensors:
         sensor_bp, sensor_transform, attach_to=vehicle)
     sensor_actors.append(sensor_actor)
 
-# 摄像头回调函数
-
 
 def camera_callback(image, display):
+    # 摄像头回调函数
     array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
     array = np.reshape(array, (image.height, image.width, 4))
     array = array[:, :, :3]
@@ -67,7 +81,6 @@ camera_sensor.listen(lambda image: camera_callback(image, camera_display))
 # 主循环
 try:
     while True:
-        world.tick()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 raise KeyboardInterrupt
