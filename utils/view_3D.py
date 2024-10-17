@@ -2,7 +2,7 @@ import carla
 import pygame
 import numpy as np
 import argparse
-# 设置窗口大小
+# Set up Pygame and the display window for the camera
 display_width = 800
 display_height = 600
 camera_display = pygame.display.set_mode((display_width, display_height))
@@ -22,7 +22,7 @@ def get_vehicle_by_id(world, vehicle_id):
 
 
 def camera_callback(image, display):
-    # 摄像头回调函数
+    # camera callback function
     array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
     array = np.reshape(array, (image.height, image.width, 4))
     array = array[:, :, :3]
@@ -36,33 +36,28 @@ def main(vehicle_id):
     client = carla.Client('localhost', 2000)
     client.set_timeout(10.0)
     world = client.get_world()
-
-    # 获取车辆
     vehicle = get_vehicle_by_id(world, vehicle_id)
 
     if vehicle:
         print(f"Found vehicle with ID {vehicle_id}")
-        # 在这里可以对车辆进行进一步操作，例如附加传感器
-        # 第三人称camera
         camera_bp = world.get_blueprint_library().find('sensor.camera.rgb')
         camera_transform = carla.Transform(carla.Location(x=-5, z=2.5))
         camera = world.spawn_actor(
             camera_bp, camera_transform, attach_to=vehicle)
-        # pygame 显示camera图像
 
-        # 绑定摄像头回调函数
+        # bind camera callback function
         camera.listen(lambda image: camera_callback(image, camera_display))
 
-        # 主循环
+        # main loop
         try:
             while True:
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         raise KeyboardInterrupt
         except KeyboardInterrupt:
-            print("退出程序")
+            print("Exit")
 
-        # 清理
+        # clean up
         camera.destroy()
         pygame.quit()
 
