@@ -9,7 +9,7 @@ from mmengine.utils import track_iter_progress
 from mmdet.apis import inference_detector, init_detector
 from mmdet.registry import VISUALIZERS
 
-
+1
 def parse_args():
     parser = argparse.ArgumentParser(description='MMDetection video demo')
     parser.add_argument('video', help='Video file')
