@@ -1,4 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+
+# command
+# python .\video_gpuaccel_demo.py ./demo/demo.mp4 ./configs/rtmdet/rtmdet_tiny_8xb32-300e_coco.py ./checkpoints/rtmdet_tiny_8xb32-300e_coco_20220902_112414-78e30dcc.pth --show --score-thr 0.3 --nvdecode 
 import argparse
 from typing import Tuple
 
@@ -98,6 +101,7 @@ def main():
 
     batch_input_shape = prefetch_batch_input_shape(
         model, (video_origin.width, video_origin.height))
+    print(batch_input_shape)
     ori_shape = (video_origin.height, video_origin.width)
     resize_wh = batch_input_shape[::-1]
     video_resize = VideoCapture(
@@ -105,17 +109,23 @@ def main():
         resize=resize_wh,
         resize_keepratio=True,
         resize_keepratioalign='topleft')
-
     video_writer = None
     if args.out:
         video_writer = ffmpegcv.VideoWriter(args.out, fps=video_origin.fps)
 
     with torch.no_grad():
         for i, (frame_resize, frame_origin) in enumerate(
-                zip(track_iter_progress(video_resize), video_origin)):
+                zip(track_iter_progress((video_resize,len(video_resize))), video_origin)):
             data = pack_data(frame_resize, batch_input_shape, ori_shape)
+            print(data["data_samples"][0])
+            scale_x,scale_y = data["data_samples"][0].scale_factor
             result = model.test_step(data)[0]
 
+            bboxes = result.pred_instances.bboxes
+            bboxes[:, [0, 2]] /= scale_y 
+            bboxes[:, [1, 3]] /= scale_x 
+
+            # print(result.pred_instances.bboxes)
             visualizer.add_datasample(
                 name='video',
                 image=frame_origin,

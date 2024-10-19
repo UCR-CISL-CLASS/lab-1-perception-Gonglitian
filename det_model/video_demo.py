@@ -8,8 +8,8 @@ from mmengine.utils import track_iter_progress
 
 from mmdet.apis import inference_detector, init_detector
 from mmdet.registry import VISUALIZERS
-
-1
+#command
+# python .\video_demo.py ./demo/demo.mp4 ./configs/rtmdet/rtmdet_tiny_8xb32-300e_coco.py ./checkpoints/rtmdet_tiny_8xb32-300e_coco_20220902_112414-78e30dcc.pth --show --score-thr 0.5       
 def parse_args():
     parser = argparse.ArgumentParser(description='MMDetection video demo')
     parser.add_argument('video', help='Video file')
@@ -49,7 +49,7 @@ def main():
     # the dataset_meta is loaded from the checkpoint and
     # then pass to the model in init_detector
     visualizer.dataset_meta = model.dataset_meta
-
+    
     video_reader = mmcv.VideoReader(args.video)
     video_writer = None
     if args.out:
@@ -59,6 +59,7 @@ def main():
             (video_reader.width, video_reader.height))
 
     for frame in track_iter_progress((video_reader, len(video_reader))):
+        print(frame.shape)
         result = inference_detector(model, frame, test_pipeline=test_pipeline)
         visualizer.add_datasample(
             name='video',
