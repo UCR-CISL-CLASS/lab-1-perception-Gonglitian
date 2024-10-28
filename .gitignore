@@ -161,3 +161,4 @@ cython_debug/
 .history
 det_model/data
 det_model/work_dirs
+lidar_data

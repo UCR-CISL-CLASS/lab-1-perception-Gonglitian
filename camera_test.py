@@ -16,7 +16,6 @@ def get_vehicle_by_id(world, vehicle_id):
             return actor
     return None
 
-
 # 设置窗口大小
 display_width = 800
 display_height = 600
@@ -47,7 +46,6 @@ vehicle.set_autopilot(True)
 
 # 定义传感器
 sensors = Detector().sensors()
-
 # 安装传感器
 sensor_actors = []
 for sensor in sensors:

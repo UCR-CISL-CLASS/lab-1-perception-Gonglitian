@@ -35,11 +35,11 @@ class Detector:
             # {'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.4, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
             #  'width': 300, 'height': 200, 'fov': 100, 'id': 'Right'},
 
-            # {'type': 'sensor.lidar.ray_cast', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0,
-            #  'range': 50,
-            #  'rotation_frequency': 20, 'channels': 64,
-            #  'upper_fov': 4, 'lower_fov': -20, 'points_per_second': 2304000,
-            #  'id': 'LIDAR'},
+            {'type': 'sensor.lidar.ray_cast', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0,
+             'range': 50,
+             'rotation_frequency': 20, 'channels': 64,
+             'upper_fov': 4, 'lower_fov': -20, 'points_per_second': 2304000,
+             'id': 'LIDAR'},
 
             # {'type': 'sensor.other.gnss', 'x': 0.7,
             #     'y': -0.4, 'z': 1.60, 'id': 'GPS'}
