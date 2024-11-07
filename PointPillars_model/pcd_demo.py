@@ -6,7 +6,6 @@ from argparse import ArgumentParser
 from mmengine.logging import print_log
 
 from mmdet3d.apis import LidarDet3DInferencer
-import os
 from pprint import pprint
 os.environ['DISPLAY'] = '1'
 
@@ -77,8 +76,9 @@ def parse_args():
 def main():
     # TODO: Support inference of point cloud numpy file.
     init_args, call_args = parse_args()
-
+    # pprint(init_args)
     inferencer = LidarDet3DInferencer(**init_args)
+    
     result = inferencer(**call_args)
     pprint(result)
     if call_args['out_dir'] != '' and not (call_args['no_save_vis']

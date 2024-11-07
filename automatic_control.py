@@ -812,13 +812,16 @@ class CameraManager(object):
         inv_matrix = np.array(self.sensor.get_transform().get_inverse_matrix())
         sensor_gt_box = None
         sensor_det_box = None
-        if gt_bbox is not None:
+        if gt_bbox is not None and gt_bbox.size > 0:
             reshape_gt_bbox = np.array(gt_bbox).reshape(-1, 3)
             sensor_gt_box = Transform.transform_with_matrix(reshape_gt_bbox, inv_matrix) 
             sensor_gt_box = np.array(sensor_gt_box).reshape(-1, gt_bbox.shape[1], 3)
-        if det_bbox is not None:
+        if det_bbox is not None and det_bbox.size > 0:
+            # sensor_det_box = det_bbox
             reshape_det_bbox = np.array(det_bbox).reshape(-1, 3)
             sensor_det_box = Transform.transform_with_matrix(reshape_det_bbox, inv_matrix)
+            sensor_det_box = reshape_det_bbox
+
             sensor_det_box = np.array(sensor_det_box).reshape(-1, det_bbox.shape[1], 3)
 
         if self.sensors[self.index][0].startswith('sensor.lidar'):

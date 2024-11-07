@@ -1,18 +1,65 @@
-#####################################################
-# To acquire point cloud and display it with open3d
-#####################################################
 import sys
 import time
-
+import math
 import carla
 import open3d as o3d
 import numpy as np
 import random
 from matplotlib import cm
 from datetime import datetime
-
+from pprint import pprint
+from utils.transform import Transform
 VIDIDIS = np.array(cm.get_cmap("plasma").colors)
 VID_RANGE = np.linspace(0.0, 1.0, VIDIDIS.shape[0])
+
+def get_gt_results():
+    """
+    Get all the ground truth actors in the scene
+    """
+    actor_list = world.get_actors()
+    vehicles = actor_list.filter("*vehicle*")
+    walkers = actor_list.filter("*walker.pedestrian*")
+    detection_results = dict()
+    detection_results["det_boxes"] = []
+    detection_results["det_class"] = []
+    detection_results["det_score"] = []
+    transform = vehicle.get_transform()
+    def dist(l):
+        return math.sqrt((l.x - transform.location.x)**2 + (l.y - transform.location.y)
+                            ** 2 + (l.z - transform.location.z)**2)
+    for v in vehicles:
+        if dist(v.get_location()) > 50:
+            continue
+        if v.id == vehicle.id:
+            continue
+        bbox = [[v.x, v.y, v.z] for v in v.bounding_box.get_world_vertices(v.get_transform())]
+        bbox = gt_box_vertice_sequence(bbox)
+        detection_results["det_boxes"].append(bbox)
+        detection_results["det_class"].append(0)
+        detection_results["det_score"].append(1.0)
+    for w in walkers:
+        if dist(w.get_location()) > 50:
+            continue
+        bbox = [[w.x, w.y, w.z] for w in w.bounding_box.get_world_vertices(w.get_transform())]
+        bbox = gt_box_vertice_sequence(bbox)
+        detection_results["det_boxes"].append(bbox)
+        detection_results["det_class"].append(1)
+        detection_results["det_score"].append(1.0)
+    detection_results["det_boxes"] = np.array(detection_results["det_boxes"])
+    detection_results["det_class"] = np.array(detection_results["det_class"])
+    detection_results["det_score"] = np.array(detection_results["det_score"])
+    return detection_results
+
+def gt_box_vertice_sequence(box):
+    box = [box[1],
+            box[3],
+            box[7],
+            box[5],
+            box[0],
+            box[2],
+            box[6],
+            box[4]]
+    return np.array(box)
 
 def generate_lidar_bp(blueprint_library, delta):
     """
@@ -35,7 +82,6 @@ def generate_lidar_bp(blueprint_library, delta):
 
     return lidar_bp
 
-
 def lidar_callback(point_cloud, point_list):
     # We need to convert point cloud(carla-format) into numpy.ndarray
     data = np.copy(np.frombuffer(point_cloud.raw_data, dtype = np.dtype("f4")))
@@ -53,7 +99,18 @@ def lidar_callback(point_cloud, point_list):
     point_list.points = o3d.utility.Vector3dVector(points)
     point_list.colors = o3d.utility.Vector3dVector(int_color)
 
-
+def create_lineset_from_bbox(bbox):
+    """
+    Create an Open3D LineSet from a bounding box.
+    """
+    lines = [[0,1], [1,3], [3,2], [2,0], [0,4], [4,5], [5,1], [5,7], [7,6], [6,4], [6,2], [7,3]]
+    colors = [[0, 1, 0] for _ in range(len(lines))]  # Green color for all lines
+    line_set = o3d.geometry.LineSet(
+        points=o3d.utility.Vector3dVector(bbox),
+        lines=o3d.utility.Vector2iVector(lines),
+    )
+    line_set.colors = o3d.utility.Vector3dVector(colors)
+    return line_set
 
 if __name__ == "__main__":
     print(f"Let's show point cloud with open3d in carla!")
@@ -72,7 +129,7 @@ if __name__ == "__main__":
 
         settings.fixed_delta_seconds = delta
         settings.synchronous_mode = True
-        # settings.no_rendering_mode = True
+        settings.no_rendering_mode = True
         world.apply_settings(settings)
 
         # 2. To get blueprint for your ego vehicle and spawn it!
@@ -85,12 +142,18 @@ if __name__ == "__main__":
 
         # 3. To get lidar blueprint and spawn it on your car!
         lidar_bp = generate_lidar_bp(blueprint_library, delta)
-        lidar_transform = carla.Transform(carla.Location(x = -0.5, z = 1.8))
+        lidar_transform = carla.Transform(carla.Location(x = 0, z = 1.8))
         lidar = world.spawn_actor(lidar_bp, lidar_transform, attach_to = vehicle)
-
-        # 4. We set a point_list to store our point cloud
+        inv_matrix = np.array(lidar.get_transform().get_inverse_matrix())
+        # 4.1 We set a point_list to store our point cloud
         point_list = o3d.geometry.PointCloud()
-
+        # 4.2 draw ground truth boxes
+        gt_boxes = get_gt_results()["det_boxes"]
+        reshape_gt_bbox = np.array(gt_boxes).reshape(-1, 3)
+        sensor_gt_box = Transform.transform_with_matrix(
+            reshape_gt_bbox, inv_matrix)
+        for bbox in sensor_gt_box:
+            line_set = create_lineset_from_bbox(sensor_gt_box)
         # 5. Listen to the lidar to collect point cloud
         lidar.listen(lambda data: lidar_callback(data, point_list))
 
@@ -110,11 +173,22 @@ if __name__ == "__main__":
         frame = 0
         dt0 = datetime.now() 
 
+
         while True:
             if frame == 2:
                 vis.add_geometry(point_list)
-
+                vis.add_geometry(line_set)
+            # pprint(get_gt_boxes(world, vehicle)["det_boxes"].shape)
             vis.update_geometry(point_list)
+
+            # gt_boxes = get_gt_results()["det_boxes"]
+            # reshape_gt_bbox = np.array(gt_boxes).reshape(-1, 3)
+            # sensor_gt_box = Transform.transform_with_matrix(
+            #     reshape_gt_bbox, inv_matrix)
+            # for bbox in sensor_gt_box:
+            #     line_set = create_lineset_from_bbox(sensor_gt_box)
+            vis.update_geometry(line_set)
+
             vis.poll_events()
             vis.update_renderer()
             time.sleep(0.005)
@@ -126,7 +200,6 @@ if __name__ == "__main__":
             transform = vehicle.get_transform()  # we get the transform of vehicle
             spectator.set_transform(carla.Transform(transform.location + carla.Location(z=50),
                                                     carla.Rotation(pitch=-90)))
-
 
             process_time = datetime.now() - dt0
             sys.stdout.write("\r" + "FPS: " + str(1.0 / process_time.total_seconds()) + "Current Frame: " + str(frame))
@@ -141,3 +214,4 @@ if __name__ == "__main__":
         vehicle.destroy()
         lidar.destroy()
         vis.destroy_window()
+        print("Finished!")  # Clean up and exit
